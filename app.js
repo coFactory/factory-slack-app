@@ -1,8 +1,5 @@
 const { App } = require('@slack/bolt');
-
-const momentLib = require('moment');
-const oauth2Lib = require('simple-oauth2')
-const axiosLib = require("axios");
+const joan = require('./joan');
 
 // Initializes your app with your bot token and signing secret
 const app = new App({
@@ -13,72 +10,6 @@ const app = new App({
 // We track information on events as it's received, to reduce API calls.
 var eventData = {};
 
-const joan = {
-  auth: async () => {
-    const oauth2 = oauth2Lib.create({
-      client: {
-        id: process.env.JOAN_CONSUMER_KEY,
-        secret: process.env.JOAN_CONSUMER_SECRET
-      },
-      auth: {
-        tokenHost: 'https://portal.getjoan.com',
-        tokenPath: '/api/token/'
-      }
-    });
-
-    try {
-      const result = await oauth2.clientCredentials.getToken({
-        scope: 'read write'
-      });
-      const accessToken = oauth2.accessToken.create(result);
-
-      console.log('Bearer ' + accessToken.token.access_token);
-      return accessToken;
-    } catch (error) {
-      console.log('Access Token error', error.message);
-    }
-  },
-  getReservations: async (accessToken) => {
-    const url = 'https://portal.getjoan.com/api/v1.0/events/';
-
-    try {
-      const response = await axiosLib({
-        method: 'get',
-        url: url,
-        headers: {
-          'Authorization': 'Bearer ' + accessToken.token.access_token
-        }
-      });
-      const data = response.data;
-      return(data);
-    } catch (error) {
-      console.log(error);
-    }
-  },
-  cancelReservation: async (accessToken, eventId, roomId) => {
-    const url = 'https://portal.getjoan.com/api/v1.0/events/cancel/';
-
-    try {
-      const response = await axiosLib({
-        method: 'post',
-        url: url,
-        headers: {
-          'Authorization': 'Bearer ' + accessToken.token.access_token
-        },
-        data: {
-          finish: false,
-          event_id: eventId,
-          room_id: roomId,
-          timezone: 'America/Detroit'
-        }
-      });
-      const data = response.data;
-      return(data);
-    } catch (error) {
-      console.log(error);
-    }
-  }
-};
 
 // Listens to incoming messages that contain "rooms"
 app.message('rooms', async ({ message, say, context }) => {
@@ -91,8 +22,7 @@ app.message('rooms', async ({ message, say, context }) => {
   });
   const userEmail = profile.user.profile.email;
 
-  const accessToken = await joan.auth();
-  const reservations = await joan.getReservations(accessToken);
+  const reservations = await joan.getReservations();
 
   var output = [];
   for (var roomIndex = 0; roomIndex < reservations.length; roomIndex++) {
@@ -148,8 +78,7 @@ app.action('cancel_event', async ({ body, ack, say }) => {
   const eventId = body.actions[0].value;
   const roomId = eventData[eventId].resource;
 
-  const accessToken = await joan.auth();
-  await joan.cancelReservation(accessToken, eventId, roomId);
+  await joan.cancelReservation(eventId, roomId);
   say('_' + eventData[eventId].summary + '_ was cancelled.');
 });
 
