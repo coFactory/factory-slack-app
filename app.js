@@ -7,18 +7,21 @@ const app = new App({
   signingSecret: process.env.SLACK_SIGNING_SECRET
 });
 
-// We track information on events as it's received, to reduce API calls.
+// We track information on events as they are received, to reduce API calls.
 var eventData = {};
 
-
 // Listens to incoming messages that contain "rooms"
-app.message('rooms', async ({ message, say, context }) => {
-  // say() sends a message to the channel where the event was triggered
-  say(`Here's the schedule, <@${message.user}>:`);
+app.command('/rooms', async ({ command, ack, respond, context }) => {
+  ack();
+
+  respond({
+    text: `Here's the schedule, <@${command.user_id}>:`,
+    response_type: 'ephemeral'
+  });
 
   const profile = await app.client.users.info({
     token: context.botToken,
-    user: message.user
+    user: command.user_id
   });
   const userEmail = profile.user.profile.email;
 
@@ -70,7 +73,10 @@ app.message('rooms', async ({ message, say, context }) => {
     });
     output = output.concat(roomOutput);
   }
-  say({blocks: output});
+  respond({
+    blocks: output,
+    response_type: 'ephemeral'
+  });
 });
 
 app.action('cancel_event', async ({ body, ack, say }) => {
