@@ -1,5 +1,6 @@
 const { App } = require('@slack/bolt');
 const joan = require('./joan');
+const moment = require('moment');
 
 // Initializes your app with your bot token and signing secret
 const app = new App({
@@ -10,7 +11,7 @@ const app = new App({
 // We track information on events as they are received, to reduce API calls.
 var eventData = {};
 
-// Listens to incoming messages that contain "rooms"
+// Listens for /rooms command
 app.command('/rooms', async ({ command, ack, respond, context }) => {
   ack();
 
@@ -79,13 +80,78 @@ app.command('/rooms', async ({ command, ack, respond, context }) => {
   });
 });
 
-app.action('cancel_event', async ({ body, ack, say }) => {
+app.action('cancel_event', async ({ body, ack, respond }) => {
   ack();
   const eventId = body.actions[0].value;
   const roomId = eventData[eventId].resource;
 
   await joan.cancelReservation(eventId, roomId);
-  say('_' + eventData[eventId].summary + '_ was cancelled.');
+  respond({
+    text: '_' + eventData[eventId].summary + '_ was cancelled.',
+    response_type: 'ephemeral'
+  });
+});
+
+// Listens for /book command
+app.command('/book', async ({ command, ack, respond, context }) => {
+  ack();
+
+  await app.client.dialog.open({
+    token: context.botToken,
+    trigger_id: command.trigger_id,
+    dialog: {
+      callback_id: 'book_room',
+      title: 'Book a Room',
+      submit_label: 'Book',
+      elements: [
+        {
+          type: 'text',
+          label: 'Purpose',
+          name: 'purpose',
+          hint: 'Displayed on placard during meeting.',
+          value: command.text
+        },
+        {
+          type: 'text',
+          label: 'Date',
+          name: 'date',
+          value: moment().format('MM/DD/YYYY')
+        },
+        {
+          type: 'text',
+          label: 'Start Time',
+          name: 'start',
+          value: moment().startOf('hour').add(1, 'h').format('hh:mm A')
+        },
+        {
+          type: 'text',
+          label: 'End Time',
+          name: 'end',
+          value: moment().startOf('hour').add(2, 'h').format('hh:mm A')
+        },
+        {
+          type: 'select',
+          label: 'Room',
+          name: 'room',
+          options: [
+            {
+              label: 'Room 1',
+              value: 'one'
+            },
+            {
+              label: 'Room 2',
+              value: 'two'
+            }
+          ]
+        }
+      ]
+    }
+  });
+});
+
+app.action({ callback_id: 'book_room' }, async ({ body, ack, respond }) => {
+  ack();
+  console.log(body);
 });
 
 (async () => {
