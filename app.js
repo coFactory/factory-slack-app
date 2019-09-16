@@ -1,6 +1,7 @@
 const { App } = require('@slack/bolt');
 const joan = require('./joan');
 const moment = require('moment');
+const uuidv4 = require('uuid/v4');
 
 // Initializes your app with your bot token and signing secret
 const app = new App({
@@ -10,6 +11,10 @@ const app = new App({
 
 // We track information on events as they are received, to reduce API calls.
 var eventData = {};
+
+// Track accumulated metadata about conversations in progress.
+var conversations = {};
+
 
 // Listens for /rooms command
 app.command('/rooms', async ({ command, ack, respond, context }) => {
@@ -128,21 +133,6 @@ app.command('/book', async ({ command, ack, respond, context }) => {
           label: 'End Time',
           name: 'end',
           value: moment().startOf('hour').add(2, 'h').format('hh:mm A')
-        },
-        {
-          type: 'select',
-          label: 'Room',
-          name: 'room',
-          options: [
-            {
-              label: 'Room 1',
-              value: 'one'
-            },
-            {
-              label: 'Room 2',
-              value: 'two'
-            }
-          ]
         }
       ]
     }
@@ -150,9 +140,130 @@ app.command('/book', async ({ command, ack, respond, context }) => {
 });
 
 app.action({ callback_id: 'book_room' }, async ({ body, ack, respond }) => {
+  const testDate = moment(body.submission.date, 'MM/DD/YYYY');
+  const startMoment = moment(body.submission.date + ' ' + body.submission.start, 'MM/DD/YYYY hh:mm A');
+  const endMoment = moment(body.submission.date + ' ' + body.submission.end, 'MM/DD/YYYY hh:mm A');
+  var errors = [];
+  if (!testDate.isValid()) {
+    errors.push({
+      name: 'date',
+      error: 'Must be a valid date in MM/DD/YYYY format.'
+    });
+  }
+  if (!startMoment.isValid()) {
+    errors.push({
+      name: 'start',
+      error: 'Could not understand that start date/time.'
+    });
+  }
+  if (!endMoment.isValid()) {
+    errors.push({
+      name: 'end',
+      error: 'Could not understand that end date/time.'
+    });
+  }
+  if (errors.length == 0) {
+    const duration = moment.duration(endMoment.diff(startMoment)).asMinutes();
+    if (duration < 1) {
+      errors.push({
+        name: 'end',
+        error: 'End time must be after start time.'
+      });
+    }
+  }
+
+  if (errors.length) {
+    ack({errors: errors});
+    return;
+  }
+
   ack();
-  console.log(body);
+
+  const conversationId = uuidv4();
+  conversations[conversationId] = {
+    expire: moment().add(1, 'hours'),
+    purpose: body.submission.purpose,
+    startMoment: startMoment,
+    endMoment: endMoment
+  };
+
+  // console.log(joan.availableRooms(startMoment.toISOString(), duration));
+
+  const rooms = await joan.getRooms();
+
+  respond({
+    blocks: [
+      {
+        type: 'section',
+        block_id: conversationId,
+        text: {
+          type: 'mrkdwn',
+          text: 'Room to reserve:'
+        },
+        accessory: {
+          type: 'static_select',
+          action_id: 'book_room_select',
+          placeholder: {
+            type: 'plain_text',
+            text: 'Select room...',
+          },
+          options: rooms.map((room, index) => {
+            return {
+              text: {
+                type: 'plain_text',
+                text: room.name
+              },
+              value: index.toString()
+            };
+          })
+        }
+      }
+    ],
+    response_type: 'ephemeral'
+  });
 });
+
+app.action('book_room_select', async ({ body, ack, respond, context }) => {
+  ack();
+
+  const conversationData = conversations[body.actions[0].block_id];
+  if (!conversationData) {
+    respond({
+      text: 'This booking session seems to have expired. Please try a new one.',
+      response_type: 'ephemeral'
+    });
+    return;
+  }
+
+  const profile = await app.client.users.info({
+    token: context.botToken,
+    user: body.user.id
+  });
+
+  const rooms = await joan.getRooms();
+  const room = rooms[body.actions[0].selected_option.value];
+
+  const startDateTime = conversationData.startMoment.toISOString();
+  const endDateTime = conversationData.endMoment.toISOString();
+  const userEmail = profile.user.profile.email;
+  const title = conversationData.purpose;
+
+  const event = await joan.bookRoom(room.email, startDateTime, endDateTime, userEmail, title);
+  if (event) {
+    respond({
+      text: 'Successfully booked 🚪 ' + room.name + ' for 📌 ' + event.summary + ' at ⏰ ' + moment(event.start).format('ddd, h:mm A') + '.',
+      response_type: 'ephemeral'
+    });
+  }
+  else {
+    respond({
+      text: 'Sorry, I could not book 🚪 ' + room.name + ' at ⏰ ' + moment(startDateTime).format('ddd, h:mm A') + '.',
+      response_type: 'ephemeral'
+    });
+  }
+
+});
+
 
 (async () => {
   // Start your app

@@ -6,6 +6,7 @@ const axiosLib = require('axios');
 var joan = {};
 
 var accessToken = false;
+var rooms = [];
 
 const getAccessToken = async () => {
   if (accessToken && !accessToken.expired()) {
@@ -97,6 +98,96 @@ joan.cancelReservation = async (eventId, roomId) => {
     console.log(error);
   }
 };
+
+joan.getRooms = async () => {
+  if (rooms.length > 0) {
+    return rooms;
+  }
+
+  const accessToken = await getAccessToken();
+  const url = 'https://portal.getjoan.com/api/v1.0/rooms/';
+
+  try {
+    const response = await axiosLib({
+      method: 'get',
+      url: url,
+      headers: {
+        'Authorization': 'Bearer ' + accessToken.token.access_token
+      }
+    });
+    rooms = response.data.results;
+    rooms.sort((a, b) => a.name < b.name ? -1 : 1);
+    console.log(rooms);
+    return(rooms);
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+/**
+ * List the rooms that are available for scheduling.
+ */
+joan.availableRooms = async (startDateTime, duration) => {
+  if (rooms.length > 0) {
+    return rooms;
+  }
+
+  const accessToken = await getAccessToken();
+  const url = 'https://portal.getjoan.com/api/v1.0/get_room/';
+
+  try {
+    const response = await axiosLib({
+      method: 'post',
+      url: url,
+      headers: {
+        'Authorization': 'Bearer ' + accessToken.token.access_token
+      },
+      data: {
+        eventStart: startDateTime,
+        duration: duration,
+        timezone: 'America/Detroit'
+      }
+    });
+    rooms = response.data.results;
+    rooms.sort((a, b) => a.name < b.name ? -1 : 1);
+    console.log(rooms);
+    return(rooms);
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+/**
+ * Book a room.
+ */
+joan.bookRoom = async (roomEmail, startDateTime, endDateTime, userEmail, title) => {
+  const accessToken = await getAccessToken();
+  const url = 'https://portal.getjoan.com/api/v1.0/events/book/';
+
+  try {
+    const response = await axiosLib({
+      method: 'post',
+      url: url,
+      headers: {
+        'Authorization': 'Bearer ' + accessToken.token.access_token
+      },
+      data: {
+        source: roomEmail,
+        start: startDateTime,
+        end: endDateTime,
+        timezone: 'America/Detroit',
+        organizer: userEmail,
+        title: title,
+        auto_confirm: true
+      }
+    });
+    const event = response.data;
+    return(event);
+  } catch (error) {
+    console.log(error);
+    return false;
+  }
+}
 
 
 module.exports = joan;
