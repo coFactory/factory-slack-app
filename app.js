@@ -49,16 +49,21 @@ app.command('/rooms', async ({ command, ack, respond, context }) => {
       const event = reservations[roomIndex].events[eventIndex];
       eventData[event.id] = event;
 
+      if (moment(event.end) < moment()) {
+        continue;
+      }
+
       const startTimestamp = Math.floor(new Date(event.start).getTime() / 1000);
       const endTimestamp = Math.floor(new Date(event.end).getTime() / 1000);
-      const when = '<!date^' + startTimestamp + '^{date_short_pretty} {time}|' + event.start + '> - <!date^' + endTimestamp + '^{time}|' + event.end + '>';
-      const who = /^The Factory Downtown/.test(event.organizer.displayName) ? '' : event.organizer.displayName
+      const when = '⏰ <!date^' + startTimestamp + '^{date_short_pretty} {time}|' + event.start + '> - <!date^' + endTimestamp + '^{time}|' + event.end + '>';
+      const what = (event.summary != 'Booked' && event.summary != 'Booked (Slack)') ? '📌 ' + event.summary : '';
+      const who = /^The Factory Downtown/.test(event.organizer.displayName) ? '' : '🙂 ' + event.organizer.displayName
 
       var eventOutput = {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: '⏰ ' + when + '  📌 ' + event.summary + '  🙂 ' + who,
+          text: when + '  ' + what + '  ' + who,
         }
       };
       if (event.organizer.email == userEmail) {
@@ -251,7 +256,7 @@ app.action('book_room_select', async ({ body, ack, respond, context }) => {
   const event = await joan.bookRoom(room.email, startDateTime, endDateTime, userEmail, title);
   if (event) {
     respond({
-      text: 'Successfully booked 🚪 ' + room.name + ' for 📌 ' + event.summary + ' at ⏰ ' + moment(event.start).format('ddd, h:mm A') + '.',
+      text: 'Successfully booked *' + event.summary + '* for _' + moment(event.start).format('ddd [the] Do [at] h:mm A') + '_ in *' + room.name + '*.',
       response_type: 'ephemeral'
     });
   }
