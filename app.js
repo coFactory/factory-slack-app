@@ -51,7 +51,7 @@ app.command('/rooms', async ({ command, ack, respond, context }) => {
       const event = reservations[roomIndex].events[eventIndex];
       eventData[event.id] = event;
 
-      if (moment.tz(event.end, TZ) < moment('', TZ)) {
+      if (moment.tz(event.end, TZ) < moment.tz({}, TZ)) {
         continue;
       }
 
@@ -127,19 +127,19 @@ app.command('/book', async ({ command, ack, respond, context }) => {
           type: 'text',
           label: 'Date',
           name: 'date',
-          value: moment.tz('', TZ).format('MM/DD/YYYY')
+          value: moment.tz({}, TZ).format('MM/DD/YYYY')
         },
         {
           type: 'text',
           label: 'Start Time',
           name: 'start',
-          value: moment.tz('', TZ).startOf('hour').add(1, 'h').format('hh:mm A')
+          value: moment.tz({}, TZ).startOf('hour').add(1, 'h').format('hh:mm A')
         },
         {
           type: 'text',
           label: 'End Time',
           name: 'end',
-          value: moment.tz('', TZ).startOf('hour').add(2, 'h').format('hh:mm A')
+          value: moment.tz({}, TZ).startOf('hour').add(2, 'h').format('hh:mm A')
         }
       ]
     }
@@ -188,7 +188,7 @@ app.action({ callback_id: 'book_room' }, async ({ body, ack, respond }) => {
 
   const conversationId = uuidv4();
   conversations[conversationId] = {
-    expire: moment.tz('', TZ).add(1, 'hours'),
+    expire: moment.tz({}, TZ).add(1, 'hours'),
     purpose: body.submission.purpose,
     startMoment: startMoment,
     endMoment: endMoment
