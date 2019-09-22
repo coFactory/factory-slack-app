@@ -9,6 +9,8 @@ const app = new App({
   signingSecret: process.env.SLACK_SIGNING_SECRET
 });
 
+const TZ = 'America/Detroit';
+
 // We track information on events as they are received, to reduce API calls.
 var eventData = {};
 
@@ -145,9 +147,9 @@ app.command('/book', async ({ command, ack, respond, context }) => {
 });
 
 app.action({ callback_id: 'book_room' }, async ({ body, ack, respond }) => {
-  const testDate = moment(body.submission.date, 'MM/DD/YYYY');
-  const startMoment = moment(body.submission.date + ' ' + body.submission.start, 'MM/DD/YYYY hh:mm A');
-  const endMoment = moment(body.submission.date + ' ' + body.submission.end, 'MM/DD/YYYY hh:mm A');
+  const testDate = moment.tz(body.submission.date, 'MM/DD/YYYY', TZ);
+  const startMoment = moment.tz(body.submission.date + ' ' + body.submission.start, 'MM/DD/YYYY hh:mm A', TZ);
+  const endMoment = moment.tz(body.submission.date + ' ' + body.submission.end, 'MM/DD/YYYY hh:mm A', TZ);
   var errors = [];
   if (!testDate.isValid()) {
     errors.push({
@@ -248,21 +250,21 @@ app.action('book_room_select', async ({ body, ack, respond, context }) => {
   const rooms = await joan.getRooms();
   const room = rooms[body.actions[0].selected_option.value];
 
-  const startDateTime = conversationData.startMoment.format('YYYY-MM-DD[T]HH:mm:ss');
-  const endDateTime = conversationData.endMoment.format('YYYY-MM-DD[T]HH:mm:ss');
+  const startDateTime = conversationData.startMoment.toIsoString();
+  const endDateTime = conversationData.endMoment.toIsoString();
   const userEmail = profile.user.profile.email;
   const title = conversationData.purpose;
 
   const event = await joan.bookRoom(room.email, startDateTime, endDateTime, userEmail, title);
   if (event) {
     respond({
-      text: 'Successfully booked *' + event.summary + '* for _' + moment(event.start).format('ddd [the] Do [at] h:mm A') + '_ in *' + room.name + '*.',
+      text: 'Successfully booked *' + event.summary + '* for _' + moment.tz(event.start, TZ).format('ddd [the] Do [at] h:mm A') + '_ in *' + room.name + '*.',
       response_type: 'ephemeral'
     });
   }
   else {
     respond({
-      text: 'Sorry, I could not book 🚪 ' + room.name + ' at ⏰ ' + moment(startDateTime).format('ddd, h:mm A') + '.',
+      text: 'Sorry, I could not book *' + room.name + '* for _' + moment.tz(startDateTime, TZ).format('ddd [the] Do [at] h:mm A') + '_.',
       response_type: 'ephemeral'
     });
   }
