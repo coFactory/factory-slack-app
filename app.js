@@ -248,8 +248,8 @@ app.action('book_room_select', async ({ body, ack, respond, context }) => {
   const rooms = await joan.getRooms();
   const room = rooms[body.actions[0].selected_option.value];
 
-  const startDateTime = conversationData.startMoment.toISOString();
-  const endDateTime = conversationData.endMoment.toISOString();
+  const startDateTime = conversationData.startMoment.format('YYYY-MM-DD[T]HH:mm:ss');
+  const endDateTime = conversationData.endMoment.format('YYYY-MM-DD[T]HH:mm:ss');
   const userEmail = profile.user.profile.email;
   const title = conversationData.purpose;
 
