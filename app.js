@@ -57,7 +57,7 @@ app.command('/rooms', async ({ command, ack, respond, context }) => {
       const endTimestamp = Math.floor(new Date(event.end).getTime() / 1000);
       const when = '⏰ <!date^' + startTimestamp + '^{date_short_pretty} {time}|' + event.start + '> - <!date^' + endTimestamp + '^{time}|' + event.end + '>';
       const what = (event.summary != 'Booked' && event.summary != 'Booked (Slack)') ? '📌 ' + event.summary : '';
-      const who = /^The Factory Downtown/.test(event.organizer.displayName) ? '' : '🙂 ' + event.organizer.displayName
+      const who = event.organizer.displayName ? (/^The Factory Downtown/.test(event.organizer.displayName) ? '' : ':bust_in_silhouette: ' + event.organizer.displayName) : '';
 
       var eventOutput = {
         type: 'section',
