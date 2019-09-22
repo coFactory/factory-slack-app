@@ -1,6 +1,6 @@
 const { App } = require('@slack/bolt');
 const joan = require('./joan');
-const moment = require('moment');
+const moment = require('moment-timezone');
 const uuidv4 = require('uuid/v4');
 
 // Initializes your app with your bot token and signing secret
