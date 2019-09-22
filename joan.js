@@ -164,6 +164,14 @@ joan.bookRoom = async (roomEmail, startDateTime, endDateTime, userEmail, title) 
   const accessToken = await getAccessToken();
   const url = 'https://portal.getjoan.com/api/v1.0/events/book/';
 
+  console.log({
+    roomEmail: roomEmail,
+    startDateTime: startDateTime,
+    endDateTime: endDateTime,
+    userEmail: userEmail,
+    title: title
+  });
+
   try {
     const response = await axiosLib({
       method: 'post',
