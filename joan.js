@@ -164,13 +164,17 @@ joan.bookRoom = async (roomEmail, startDateTime, endDateTime, userEmail, title) 
   const accessToken = await getAccessToken();
   const url = 'https://portal.getjoan.com/api/v1.0/events/book/';
 
-  console.log({
-    roomEmail: roomEmail,
-    startDateTime: startDateTime,
-    endDateTime: endDateTime,
-    userEmail: userEmail,
-    title: title
-  });
+  const bookingData = {
+    source: roomEmail,
+    start: startDateTime,
+    end: endDateTime,
+    timezone: 'America/Detroit',
+    organizer: userEmail,
+    title: title,
+    auto_confirm: true
+  };
+
+  console.log(url, 'Bearer ' + accessToken.token.access_token, bookingData);
 
   try {
     const response = await axiosLib({
@@ -179,15 +183,7 @@ joan.bookRoom = async (roomEmail, startDateTime, endDateTime, userEmail, title) 
       headers: {
         'Authorization': 'Bearer ' + accessToken.token.access_token
       },
-      data: {
-        source: roomEmail,
-        start: startDateTime,
-        end: endDateTime,
-        timezone: 'America/Detroit',
-        organizer: userEmail,
-        title: title,
-        auto_confirm: true
-      }
+      data: bookingData
     });
     const event = response.data;
     return(event);
