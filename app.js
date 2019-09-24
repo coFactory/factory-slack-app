@@ -133,13 +133,13 @@ app.command('/book', async ({ command, ack, respond, context }) => {
           type: 'text',
           label: 'Start Time',
           name: 'start',
-          value: moment.tz({}, TZ).startOf('hour').add(1, 'h').format('hh:mm A')
+          value: moment.tz({}, TZ).startOf('hour').add(1, 'h').format('h:mm A')
         },
         {
           type: 'text',
           label: 'End Time',
           name: 'end',
-          value: moment.tz({}, TZ).startOf('hour').add(2, 'h').format('hh:mm A')
+          value: moment.tz({}, TZ).startOf('hour').add(2, 'h').format('h:mm A')
         }
       ]
     }
@@ -148,8 +148,8 @@ app.command('/book', async ({ command, ack, respond, context }) => {
 
 app.action({ callback_id: 'book_room' }, async ({ body, ack, respond }) => {
   const testDate = moment.tz(body.submission.date, 'MM/DD/YYYY', TZ);
-  const startMoment = moment.tz(body.submission.date + ' ' + body.submission.start, 'MM/DD/YYYY hh:mm A', TZ);
-  const endMoment = moment.tz(body.submission.date + ' ' + body.submission.end, 'MM/DD/YYYY hh:mm A', TZ);
+  const startMoment = moment.tz(body.submission.date + ' ' + body.submission.start, 'MM/DD/YYYY h:mm A', TZ);
+  const endMoment = moment.tz(body.submission.date + ' ' + body.submission.end, 'MM/DD/YYYY h:mm A', TZ);
   var errors = [];
   if (!testDate.isValid()) {
     errors.push({
@@ -250,8 +250,8 @@ app.action('book_room_select', async ({ body, ack, respond, context }) => {
   const rooms = await joan.getRooms();
   const room = rooms[body.actions[0].selected_option.value];
 
-  const startDateTime = conversationData.startMoment.toISOString();
-  const endDateTime = conversationData.endMoment.toISOString();
+  const startDateTime = conversationData.startMoment.format('YYYY-MM-DD[T]HH:mm:ssZZ');
+  const endDateTime = conversationData.endMoment.format('YYYY-MM-DD[T]HH:mm:ssZZ');
   const userEmail = profile.user.profile.email;
   const title = conversationData.purpose;
 
