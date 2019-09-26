@@ -64,7 +64,8 @@ joan.getReservations = async () => {
         'Authorization': 'Bearer ' + accessToken.token.access_token
       }
     });
-    const data = response.data;
+    var data = response.data;
+    data.sort((a, b) => a.room.name < b.room.name ? -1 : 1);
     return(data);
   } catch (error) {
     console.log(error);
