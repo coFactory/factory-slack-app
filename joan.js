@@ -172,7 +172,7 @@ joan.bookRoom = async (roomEmail, startDateTime, endDateTime, userEmail, title) 
     timezone: 'America/Detroit',
     organizer: userEmail,
     title: title,
-    auto_confirm: true
+    auto_confirm: false
   };
 
   console.log(url, 'Bearer ' + accessToken.token.access_token, bookingData);
