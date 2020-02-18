@@ -118,7 +118,6 @@ joan.getRooms = async () => {
     });
     rooms = response.data.results;
     rooms.sort((a, b) => a.name < b.name ? -1 : 1);
-    console.log(rooms);
     return(rooms);
   } catch (error) {
     console.log(error);
@@ -129,10 +128,6 @@ joan.getRooms = async () => {
  * List the rooms that are available for scheduling.
  */
 joan.availableRooms = async (startDateTime, duration) => {
-  if (rooms.length > 0) {
-    return rooms;
-  }
-
   const accessToken = await getAccessToken();
   const url = 'https://portal.getjoan.com/api/v1.0/get_room/';
 
@@ -149,10 +144,8 @@ joan.availableRooms = async (startDateTime, duration) => {
         timezone: 'America/Detroit'
       }
     });
-    rooms = response.data.results;
-    rooms.sort((a, b) => a.name < b.name ? -1 : 1);
-    console.log(rooms);
-    return(rooms);
+    const roomsObject = response.data.rooms;
+    return (await joan.getRooms()).filter(room => roomsObject[room.email]);
   } catch (error) {
     console.log(error);
   }
@@ -175,8 +168,6 @@ joan.bookRoom = async (roomEmail, startDateTime, endDateTime, userEmail, title) 
     auto_confirm: false
   };
 
-  console.log(url, 'Bearer ' + accessToken.token.access_token, bookingData);
-
   try {
     const response = await axiosLib({
       method: 'post',
@@ -193,6 +184,18 @@ joan.bookRoom = async (roomEmail, startDateTime, endDateTime, userEmail, title) 
     return false;
   }
 }
+
+// Polyfill Object.entries().
+if (!Object.entries)
+  Object.entries = function( obj ){
+    var ownProps = Object.keys( obj ),
+      i = ownProps.length,
+      resArray = new Array(i); // preallocate the Array
+
+    while (i--)
+      resArray[i] = [ownProps[i], obj[ownProps[i]]];
+    return resArray;
+  };
 
 
 module.exports = joan;

@@ -150,6 +150,7 @@ app.action({ callback_id: 'book_room' }, async ({ body, ack, respond }) => {
   const testDate = moment.tz(body.submission.date, 'MM/DD/YYYY', TZ);
   const startMoment = moment.tz(body.submission.date + ' ' + body.submission.start, 'MM/DD/YYYY h:mm A', TZ);
   const endMoment = moment.tz(body.submission.date + ' ' + body.submission.end, 'MM/DD/YYYY h:mm A', TZ);
+  var duration = 0;
   var errors = [];
   if (!testDate.isValid()) {
     errors.push({
@@ -170,7 +171,7 @@ app.action({ callback_id: 'book_room' }, async ({ body, ack, respond }) => {
     });
   }
   if (errors.length == 0) {
-    const duration = moment.duration(endMoment.diff(startMoment)).asMinutes();
+    duration = moment.duration(endMoment.diff(startMoment)).asMinutes();
     if (duration < 1) {
       errors.push({
         name: 'end',
@@ -194,9 +195,8 @@ app.action({ callback_id: 'book_room' }, async ({ body, ack, respond }) => {
     endMoment: endMoment
   };
 
-  // console.log(joan.availableRooms(startMoment.toISOString(), duration));
-
   const rooms = await joan.getRooms();
+  const openRooms = await joan.availableRooms(startMoment.format('YYYY-MM-DD[T]HH:mm:ssZZ'), duration);
 
   respond({
     blocks: [
@@ -214,13 +214,14 @@ app.action({ callback_id: 'book_room' }, async ({ body, ack, respond }) => {
             type: 'plain_text',
             text: 'Select room...',
           },
-          options: rooms.map((room, index) => {
+          options: openRooms.map((openRoom, index) => {
+            const roomIndex = rooms.findIndex(roomInfo => roomInfo.email == openRoom.email);
             return {
               text: {
                 type: 'plain_text',
-                text: room.name
+                text: rooms[roomIndex].name
               },
-              value: index.toString()
+              value: roomIndex.toString()
             };
           })
         }
